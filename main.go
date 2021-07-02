@@ -12,12 +12,14 @@ import (
 
 func main() {
 	// get program name as argument
-	var arg1 string
-	arg1 = os.Args[1]
+	arg1 := os.Args[1]
 	program_name := arg1
 	//get date
 	date := time.Now().Format("01-02-2006")
 
+	// make dirs for recon
+	prepDirsCommand := "mkdir -p ./Programs/" + program_name + "/" + date
+	exec.Command("bash", "-c", prepDirsCommand)
 	// create go routine shiz
 	var wg sync.WaitGroup
 
