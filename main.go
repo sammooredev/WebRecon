@@ -38,6 +38,7 @@ func main() {
 	for scanner.Scan() {
 		domains = append(domains, scanner.Text())
 	}
+	fmt.Println(domains)
 	// for file in splits folder
 	var files []string
 	splits_folder := "./wordlists/commonspeak-splits"
@@ -53,27 +54,26 @@ func main() {
 		wg.Add(1)
 	}
 	fmt.Println("Starting Enumeration...")
-	//
-	//// run amass
-	//fmt.Println("\nStarting amass on: " + program_name + ". . .")
-	//programpath := "./Programs/" + program_name + "/" + date + "/"
-	//
-	//// run amass
-	//go RunAmass(program_name, programpath, &wg)
-	//wg.Add(1)
-	//
-	//// run subfinder
-	//fmt.Println("\nStarting Subfinder on: " + program_name + ". . .")
-	//
-	////run subfinder
-	//go RunSubfinder(program_name, programpath, &wg)
-	//wg.Add(1)
-	//wg.Wait()
+	// run amass
+	fmt.Println("\nStarting amass on: " + program_name + ". . .")
+	programpath := "./Programs/" + program_name + "/" + date + "/"
+
+	// run amass
+	go RunAmass(program_name, programpath, &wg)
+	wg.Add(1)
+
+	// run subfinder
+	fmt.Println("\nStarting Subfinder on: " + program_name + ". . .")
+
+	//run subfinder
+	go RunSubfinder(program_name, programpath, &wg)
+	wg.Add(1)
+	wg.Wait()
 
 	fmt.Println("subfinder, amass, commonspeak Complete!")
 
 	//run shuffledns to acquire initial list of live hosts.
-	fmt.Println("Starting massdns on amass/subfinder/commonspeak results . . . ")
+	fmt.Println("Starting shuffledns on amass/subfinder/commonspeak results . . . ")
 	programpath3 := "./Programs/" + program_name + "/" + date + "/"
 	// combine enumeated subdomains into one file
 	CombineSubsCmd := "sort -u " + programpath3 + "subfinder.out " + programpath3 + "amass.out " + programpath3 + "commonspeakresults.out " + " > " + programpath3 + "subdomainscombined.txt"
@@ -84,19 +84,7 @@ func main() {
 	fmt.Println(string(CombineSubsOut))
 
 	// run shuffledns
-	domains_list2, err := os.Open("./Programs/" + program_name + "/recon-data/domains.txt")
-	if err != nil {
-		fmt.Println("Error opening domains list - shuffledns section")
-	}
-	defer domains_list2.Close()
-	scanner2 := bufio.NewScanner(domains_list2)
-	scanner2.Split(bufio.ScanLines)
-	var domains2 []string
-	for scanner2.Scan() {
-		domains2 = append(domains, scanner2.Text())
-	}
-	fmt.Println(domains2)
-	for _, domain := range domains2 {
+	for _, domain := range domains {
 		//mkdir for domain
 		mkdirCommand := "mkdir -p ./Programs/" + program_name + "/" + date + "/" + domain
 		mkdirCommandOut, err := exec.Command("bash", "-c", mkdirCommand).Output()
@@ -117,10 +105,10 @@ func main() {
 		go RunMassdns(program_name, shuffle_output_path, "1", domain, &wg)
 		wg.Add(1)
 	}
-	fmt.Println("Waiting on shuffledns mode 1 . . . - ")
 	wg.Wait()
+	fmt.Println("shuffledns complete")
 	//run dnsgen (generate potential subdomains from already enumerated subdomains)
-	for _, domain := range domains2 {
+	for _, domain := range domains {
 		programpath4 := "./Programs/" + program_name + "/" + date + "/" + domain + "/"
 		go RunDNSGen(program_name, programpath4, &wg)
 		wg.Add(1)
@@ -129,7 +117,7 @@ func main() {
 	wg.Wait()
 
 	//run shuffledns, mode 2. (resolves subdomains created by dnsgen)
-	for _, domain := range domains2 {
+	for _, domain := range domains {
 		//run shuffledns
 		shuffle_output_path := "./Programs/" + program_name + "/" + date + "/" + domain + "/"
 		go RunMassdns(program_name, shuffle_output_path, "2", domain, &wg)
@@ -174,12 +162,6 @@ func runCommonspeakGeneration(domains []string, program string, blockNum string,
 			}
 		}
 	}
-	//read split line for line
-
-	// run generation script
-	//runCommonspeakGenCommand := "/bin/bash ./shell-scripts/generate-commonspeak-list.sh " + domain + " " + program + " " + blockNum + " " + date
-	//runCommonspeakOut, _ := exec.Command("bash", "-c", runCommonspeakGenCommand).Output()
-	//fmt.Println(string(runCommonspeakOut))
 	wg.Done()
 }
 
@@ -198,10 +180,9 @@ func RunAmass(fleetName string, outputPath string, wg *sync.WaitGroup) {
 func RunMassdns(fleetName string, outputPath string, mode string, domain string, wg *sync.WaitGroup) {
 	if mode == "1" {
 		// run shuffledns in mode 1: runs after initial enumeration.
-		//RunShufflednsCommand := "massdns -r ./wordlists/resolvers.txt -t A -o S --flush -w " + outputPath + "massdns0.out " + outputPath + "subdomainscombined.txt"
-
 		// Trying out Shuffledns instead. Loop through domains in domains.txt, mkdir for each domainm, grep from subdomainscombined using the domain, output to associated dir, then run shuffledns.
 		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt -d " + domain + " -list " + outputPath + "subdomains.txt -o " + outputPath + "shuffledns.out -wt 100 "
+		fmt.Println("Running shuffledns mode 1 now - " + RunShufflednsCommand)
 		RunShufflednsOut, err := exec.Command("bash", "-c", RunShufflednsCommand).Output()
 		if err != nil {
 			fmt.Println("Error shuffdns mode 1")
@@ -212,6 +193,7 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 	if mode == "2" {
 		// run shuffledns in mode 2: runs after dnsgen
 		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt  -d" + domain + " -list " + outputPath + "dnsgen.out -o " + outputPath + "subdomains-results-massdns.txt -wt 100"
+		fmt.Println("Running shuffledns mode 2 now - " + RunShufflednsCommand)
 		RunShufflednsOut, err := exec.Command("bash", "-c", RunShufflednsCommand).Output()
 		if err != nil {
 			fmt.Println("Error massdns mode 2")
@@ -223,6 +205,7 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 
 func RunDNSGen(fleetName string, outputPath string, wg *sync.WaitGroup) {
 	runDNSGenCommand := "dnsgen " + outputPath + "shuffledns.out | tee " + outputPath + "dnsgen.out"
+	fmt.Println("Running dnsgen now - " + runDNSGenCommand)
 	runDNSGenOut, err := exec.Command("bash", "-c", runDNSGenCommand).Output()
 	if err != nil {
 		log.Fatal(err)
