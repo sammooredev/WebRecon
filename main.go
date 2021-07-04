@@ -26,7 +26,6 @@ func main() {
 	var wg sync.WaitGroup
 
 	//start commonspeak sub generation
-	fmt.Println("\n\nGenerating Commonspeak2 possibilties on: " + program_name + ". . .")
 	domains_list, err := os.Open("./Programs/" + program_name + "/recon-data/domains.txt")
 	if err != nil {
 		fmt.Println("Did you create an entry in ./Programs/ dir for " + program_name + "?")
@@ -53,19 +52,14 @@ func main() {
 		go runCommonspeakGeneration(domains, program_name, split, date, &wg)
 		wg.Add(1)
 	}
+
 	fmt.Println("Starting Enumeration...")
 	// run amass
-	fmt.Println("\nStarting amass on: " + program_name + ". . .")
 	programpath := "./Programs/" + program_name + "/" + date + "/"
-
-	// run amass
 	go RunAmass(program_name, programpath, &wg)
 	wg.Add(1)
 
 	// run subfinder
-	fmt.Println("\nStarting Subfinder on: " + program_name + ". . .")
-
-	//run subfinder
 	go RunSubfinder(program_name, programpath, &wg)
 	wg.Add(1)
 	wg.Wait()
@@ -73,15 +67,14 @@ func main() {
 	fmt.Println("subfinder, amass, commonspeak Complete!")
 
 	//run shuffledns to acquire initial list of live hosts.
-	fmt.Println("Starting shuffledns on amass/subfinder/commonspeak results . . . ")
 	programpath3 := "./Programs/" + program_name + "/" + date + "/"
 	// combine enumeated subdomains into one file
 	CombineSubsCmd := "sort -u " + programpath3 + "subfinder.out " + programpath3 + "amass.out " + programpath3 + "commonspeakresults.out " + " > " + programpath3 + "subdomainscombined.txt"
-	CombineSubsOut, err := exec.Command("bash", "-c", CombineSubsCmd).Output()
-	if err != nil {
-		fmt.Println("Error Combining subs...")
-	}
-	fmt.Println(string(CombineSubsOut))
+	exec.Command("bash", "-c", CombineSubsCmd).Output()
+	//if err != nil {
+	//	fmt.Println("Error Combining subs...")
+	//}
+	//fmt.Println(string(CombineSubsOut))
 
 	// run shuffledns
 	for _, domain := range domains {
@@ -130,12 +123,13 @@ func main() {
 
 func RunSubfinder(fleetName string, outputPath string, wg *sync.WaitGroup) {
 	subFinderCommand := "subfinder -dL ./Programs/" + fleetName + "/recon-data/" + "domains.txt -o " + outputPath + "subfinder.out"
+	fmt.Println("Running subfinder - " + subFinderCommand)
 	fmt.Println(subFinderCommand)
-	subFinderOut, err := exec.Command("bash", "-c", subFinderCommand).Output()
-	fmt.Println(string(subFinderOut))
-	if err != nil {
-		fmt.Println("Error Subfinder")
-	}
+	exec.Command("bash", "-c", subFinderCommand).Output()
+	//fmt.Println(string(subFinderOut))
+	//if err != nil {
+	//	fmt.Println("Error Subfinder")
+	//}
 	wg.Done()
 }
 
@@ -150,6 +144,7 @@ func runCommonspeakGeneration(domains []string, program string, blockNum string,
 		split_file_lines = append(split_file_lines, scanner.Text())
 	}
 	//open output
+	fmt.Println("Generating potential subdomains. . .")
 	output_file, err := os.OpenFile("./Programs/"+program+"/"+date+"/commonspeakresults.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("error opening commonspeak results file")
@@ -168,12 +163,13 @@ func runCommonspeakGeneration(domains []string, program string, blockNum string,
 func RunAmass(fleetName string, outputPath string, wg *sync.WaitGroup) {
 	// run amass
 	RunAmassCommand := "amass enum -timeout 30 -df ./Programs/" + fleetName + "/recon-data/" + "domains.txt | tee -a " + outputPath + "amass.out"
-	RunAmassOut, err := exec.Command("bash", "-c", RunAmassCommand).Output()
-	fmt.Println("amass out: " + string(RunAmassOut))
-	if err != nil {
-		fmt.Println("Error Amass")
-	}
-	fmt.Println(string(RunAmassOut))
+	fmt.Println("Running Amass - " + RunAmassCommand)
+	exec.Command("bash", "-c", RunAmassCommand).Output()
+	//fmt.Println("amass out: " + string(RunAmassOut))
+	//if err != nil {
+	//	fmt.Println("Error Amass")
+	//}
+	//fmt.Println(string(RunAmassOut))
 	wg.Done()
 }
 
@@ -182,34 +178,34 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 		// run shuffledns in mode 1: runs after initial enumeration.
 		// Trying out Shuffledns instead. Loop through domains in domains.txt, mkdir for each domainm, grep from subdomainscombined using the domain, output to associated dir, then run shuffledns.
 		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt -d " + domain + " -list " + outputPath + "subdomains.txt -o " + outputPath + "shuffledns.out -wt 100 "
-		fmt.Println("Running shuffledns mode 1 now - " + RunShufflednsCommand)
-		RunShufflednsOut, err := exec.Command("bash", "-c", RunShufflednsCommand).Output()
-		if err != nil {
-			fmt.Println("Error shuffdns mode 1")
-		}
-		fmt.Println(string(RunShufflednsOut))
+		fmt.Println("Running shuffledns mode 1 - " + RunShufflednsCommand)
+		exec.Command("bash", "-c", RunShufflednsCommand).Output()
+		//if err != nil {
+		//	fmt.Println("Error shuffdns mode 1")
+		//}
+		//fmt.Println(string(RunShufflednsOut))
 		wg.Done()
 	}
 	if mode == "2" {
 		// run shuffledns in mode 2: runs after dnsgen
 		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt  -d" + domain + " -list " + outputPath + "dnsgen.out -o " + outputPath + "subdomains-results-massdns.txt -wt 100"
-		fmt.Println("Running shuffledns mode 2 now - " + RunShufflednsCommand)
-		RunShufflednsOut, err := exec.Command("bash", "-c", RunShufflednsCommand).Output()
-		if err != nil {
-			fmt.Println("Error massdns mode 2")
-		}
-		fmt.Println(string(RunShufflednsOut))
+		fmt.Println("Running shuffledns mode 2 - " + RunShufflednsCommand)
+		exec.Command("bash", "-c", RunShufflednsCommand).Output()
+		//if err != nil {
+		//	fmt.Println("Error massdns mode 2")
+		//}
+		//fmt.Println(string(RunShufflednsOut))
 		wg.Done()
 	}
 }
 
 func RunDNSGen(fleetName string, outputPath string, wg *sync.WaitGroup) {
 	runDNSGenCommand := "dnsgen " + outputPath + "shuffledns.out | tee " + outputPath + "dnsgen.out"
-	fmt.Println("Running dnsgen now - " + runDNSGenCommand)
-	runDNSGenOut, err := exec.Command("bash", "-c", runDNSGenCommand).Output()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(runDNSGenOut))
+	fmt.Println("Running dnsgen - " + runDNSGenCommand)
+	exec.Command("bash", "-c", runDNSGenCommand).Output()
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println(string(runDNSGenOut))
 	wg.Done()
 }
