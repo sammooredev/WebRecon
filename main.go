@@ -53,22 +53,22 @@ func main() {
 		wg.Add(1)
 	}
 	fmt.Println("Starting Enumeration...")
-
-	// run amass
-	fmt.Println("\nStarting amass on: " + program_name + ". . .")
-	programpath := "./Programs/" + program_name + "/" + date + "/"
-
-	// run amass
-	go RunAmass(program_name, programpath, &wg)
-	wg.Add(1)
-
-	// run subfinder
-	fmt.Println("\nStarting Subfinder on: " + program_name + ". . .")
-
-	//run subfinder
-	go RunSubfinder(program_name, programpath, &wg)
-	wg.Add(1)
-	wg.Wait()
+	//
+	//// run amass
+	//fmt.Println("\nStarting amass on: " + program_name + ". . .")
+	//programpath := "./Programs/" + program_name + "/" + date + "/"
+	//
+	//// run amass
+	//go RunAmass(program_name, programpath, &wg)
+	//wg.Add(1)
+	//
+	//// run subfinder
+	//fmt.Println("\nStarting Subfinder on: " + program_name + ". . .")
+	//
+	////run subfinder
+	//go RunSubfinder(program_name, programpath, &wg)
+	//wg.Add(1)
+	//wg.Wait()
 
 	fmt.Println("subfinder, amass, commonspeak Complete!")
 
@@ -95,6 +95,7 @@ func main() {
 	for scanner2.Scan() {
 		domains2 = append(domains, scanner2.Text())
 	}
+	fmt.Println(domains2)
 	for _, domain := range domains2 {
 		//mkdir for domain
 		mkdirCommand := "mkdir -p ./Programs/" + program_name + "/" + date + "/" + domain
@@ -116,7 +117,7 @@ func main() {
 		go RunMassdns(program_name, shuffle_output_path, "1", domain, &wg)
 		wg.Add(1)
 	}
-	fmt.Println("Waiting on shuffledns mode 1 . . .")
+	fmt.Println("Waiting on shuffledns mode 1 . . . - ")
 	wg.Wait()
 	//run dnsgen (generate potential subdomains from already enumerated subdomains)
 	for _, domain := range domains2 {
@@ -201,7 +202,6 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 
 		// Trying out Shuffledns instead. Loop through domains in domains.txt, mkdir for each domainm, grep from subdomainscombined using the domain, output to associated dir, then run shuffledns.
 		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt -d " + domain + " -list " + outputPath + "subdomains.txt -o " + outputPath + "shuffledns.out -wt 100 "
-		fmt.Println(RunShufflednsCommand)
 		RunShufflednsOut, err := exec.Command("bash", "-c", RunShufflednsCommand).Output()
 		if err != nil {
 			fmt.Println("Error shuffdns mode 1")
