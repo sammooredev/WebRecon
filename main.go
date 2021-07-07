@@ -12,23 +12,31 @@ import (
 )
 
 func main() {
+	var arg1 string
+	//switch statement here avoids any index out of range errors from the argument array.
+	switch {
+	case len(os.Args[1:]) == 0:
+		fmt.Println("to run WebRecon, run the following commands. replace <name> with whatever you like.\n\n1. Create a directory for the test\n\t$ mkdir -p ./Programs/<name>/recon-data\n2. Create a domains.txt file containing the domains to test\n\t $ vim ./Programs/<name>/recon-data/domains.txt\n\nEach domain should be on a newline:\n\tfoo.com\n\tbar.com")
+		os.Exit(1)
+	case len(os.Args[1:]) == 1:
+		arg1 = os.Args[1]
+	}
 	// get program name as argument
-	arg1 := os.Args[1]
 	program_name := arg1
 	//get date
 	date := time.Now().Format("01-02-2006")
 
 	// make dirs for recon
 	prepDirsCommand := "mkdir -p ./Programs/" + program_name + "/" + date
-	prepDirsCommandOut, _ := exec.Command("bash", "-c", prepDirsCommand).Output()
-	fmt.Println(prepDirsCommandOut)
+	exec.Command("bash", "-c", prepDirsCommand).Output()
 	// create go routine shiz
 	var wg sync.WaitGroup
-
+	fmt.Println("Starting Enumeration...")
 	//start commonspeak sub generation
 	domains_list, err := os.Open("./Programs/" + program_name + "/recon-data/domains.txt")
 	if err != nil {
 		fmt.Println("Did you create an entry in ./Programs/ dir for " + program_name + "?")
+		os.Exit(1)
 	}
 	defer domains_list.Close()
 	scanner := bufio.NewScanner(domains_list)
@@ -37,7 +45,9 @@ func main() {
 	for scanner.Scan() {
 		domains = append(domains, scanner.Text())
 	}
+	fmt.Println("\nDomains to be tested: ")
 	fmt.Println(domains)
+	fmt.Print("\n")
 	// for file in splits folder
 	var files []string
 	splits_folder := "./wordlists/commonspeak-splits"
@@ -48,12 +58,12 @@ func main() {
 	if walkerr != nil {
 		fmt.Println("error walking folder")
 	}
+	fmt.Println("Generating potential subdomains. . .")
 	for _, split := range files {
 		go runCommonspeakGeneration(domains, program_name, split, date, &wg)
 		wg.Add(1)
 	}
 
-	fmt.Println("Starting Enumeration...")
 	// run amass
 	programpath := "./Programs/" + program_name + "/" + date + "/"
 	go RunAmass(program_name, programpath, &wg)
@@ -100,8 +110,10 @@ func main() {
 	}
 	wg.Wait()
 	fmt.Println("shuffledns complete")
+
 	//run dnsgen (generate potential subdomains from already enumerated subdomains)
 	for _, domain := range domains {
+		fmt.Println("Running dnsgen on " + domain)
 		programpath4 := "./Programs/" + program_name + "/" + date + "/" + domain + "/"
 		go RunDNSGen(program_name, programpath4, &wg)
 		wg.Add(1)
@@ -124,7 +136,6 @@ func main() {
 func RunSubfinder(fleetName string, outputPath string, wg *sync.WaitGroup) {
 	subFinderCommand := "subfinder -dL ./Programs/" + fleetName + "/recon-data/" + "domains.txt -o " + outputPath + "subfinder.out"
 	fmt.Println("Running subfinder - " + subFinderCommand)
-	fmt.Println(subFinderCommand)
 	exec.Command("bash", "-c", subFinderCommand).Output()
 	//fmt.Println(string(subFinderOut))
 	//if err != nil {
@@ -144,7 +155,6 @@ func runCommonspeakGeneration(domains []string, program string, blockNum string,
 		split_file_lines = append(split_file_lines, scanner.Text())
 	}
 	//open output
-	fmt.Println("Generating potential subdomains. . .")
 	output_file, err := os.OpenFile("./Programs/"+program+"/"+date+"/commonspeakresults.out", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println("error opening commonspeak results file")
@@ -200,7 +210,7 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 }
 
 func RunDNSGen(fleetName string, outputPath string, wg *sync.WaitGroup) {
-	runDNSGenCommand := "dnsgen " + outputPath + "shuffledns.out | tee " + outputPath + "dnsgen.out"
+	runDNSGenCommand := "dnsgen -f " + outputPath + "shuffledns.out > " + outputPath + "dnsgen.out"
 	fmt.Println("Running dnsgen - " + runDNSGenCommand)
 	exec.Command("bash", "-c", runDNSGenCommand).Output()
 	//if err != nil {
