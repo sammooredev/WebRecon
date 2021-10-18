@@ -24,6 +24,16 @@ tested on go1.16.3
 6. runs shuffledns against the dnsgen output, to unconver even more subdomains.
 7. outputs a directory for each domain, containing results. 
 
+## How to use
+
+Within the WebRecon folder, you can test the script with Google-Example program.
+
+1. Edit the domains within ./Program/Google-Example/domains.txt
+2. Run WebRecon
+      ./WebRecon Google-Example
+      
+3. Output is placed into ./Programs/Google-Example/<date-at-time-of-running>
+
 ## Resources: 
 
 This tool is based off awesome blogs by [0xPatrik](https://twitter.com/0xpatrik?lang=en)
