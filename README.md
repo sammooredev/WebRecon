@@ -26,7 +26,7 @@ tested on go1.16.3
 
 ## How to use
 
-Within the WebRecon folder, you can test the script with Google-Example program.
+Within the WebRecon folder, you can test the script with the "Google-Example" program.
 
 1. Edit the domains within ./Program/Google-Example/domains.txt
 2. Run WebRecon
