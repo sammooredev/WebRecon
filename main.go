@@ -198,7 +198,7 @@ func RunMassdns(fleetName string, outputPath string, mode string, domain string,
 	}
 	if mode == "2" {
 		// run shuffledns in mode 2: runs after dnsgen
-		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt  -d" + domain + " -list " + outputPath + "dnsgen.out -o " + outputPath + "subdomains-results-massdns.txt -wt 100"
+		RunShufflednsCommand := "shuffledns -r ./wordlists/resolvers.txt  -d " + domain + " -list " + outputPath + "dnsgen.out -o " + outputPath + "subdomains-results-massdns.txt -wt 100"
 		fmt.Println("Running shuffledns mode 2 - " + RunShufflednsCommand)
 		exec.Command("bash", "-c", RunShufflednsCommand).Output()
 		//if err != nil {
