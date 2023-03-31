@@ -1,3 +1,7 @@
+#Note:
+
+I did a re-write of this tool which is much better & you should try it out instead: https://github.com/sammooredev/WebRecon2
+
 # WebRecon - another wildcard domain recon script
 
 ## Dependencies
